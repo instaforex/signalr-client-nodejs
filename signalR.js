@@ -83,11 +83,13 @@ function negotiateProxies(baseUrl, hubNames, onSuccess, onError, _client) {
         return;
     }
 
-    var negotiateData = "";
-    var negotiateUrl = baseUrl + "/negotiate?" + querystring.stringify({
+    var querystringObj = Object.assign({}, {
         connectionData: JSON.stringify(cleanedHubs),
         clientProtocol: 1.5
-    });
+    }, _client.queryStringOnConnect);
+
+    var negotiateData = "";
+    var negotiateUrl = baseUrl + "/negotiate?" + querystring.stringify(querystringObj);
     var negotiateUrlOptions = url.parse(negotiateUrl, true);
 
     var negotiateFunction = function (res) {
@@ -150,7 +152,7 @@ function negotiateProxies(baseUrl, hubNames, onSuccess, onError, _client) {
     if (negotiateUrlOptions.protocol === 'http:') {
         var negotiateResult = http.get(negotiateUrlOptions, negotiateFunction).on('error', negotiateErrorFunction);
     } else if (negotiateUrlOptions.protocol === 'wss:') {
-        negotiateUrlOptions.protocol = 'https:';
+        negotiateUrlOptions.protocol = 'https:'
         var negotiateResult = https.get(negotiateUrlOptions, negotiateFunction).on('error', negotiateErrorFunction);
     } else {
         onError('Protocol Error', undefined, negotiateUrlOptions);
@@ -294,6 +296,7 @@ function clientInterface(baseUrl, hubs, reconnectTimeout, doNotStart) {
         proxy: {},
         headers: {},
         queryString: {},
+        queryStringOnConnect: {},
         pub: client,
         url: baseUrl,
         connection: {
@@ -372,6 +375,12 @@ function clientInterface(baseUrl, hubs, reconnectTimeout, doNotStart) {
     });
     client.__defineSetter__('queryString', function (val) { mergeFrom(_client.queryString, val); });
 
+    client.__defineGetter__('queryStringOnConnect', function () {
+        removeUndefinedProperties(_client.queryStringOnConnect);
+        return _client.queryStringOnConnect;
+    });
+    client.__defineSetter__('queryStringOnConnect', function (val) { mergeFrom(_client.queryStringOnConnect, val); });
+
     client.hub = function (hubName) {
         _client.start(false);
         return _client.hubs[hubName.toLowerCase()];
@@ -435,7 +444,7 @@ function clientInterface(baseUrl, hubs, reconnectTimeout, doNotStart) {
 		var cb = callCallbacks[messageId];
 		if (cb) cb(err, result);
 	}
-	
+
     client.start = function () {
         _client.getBinding();
     };
